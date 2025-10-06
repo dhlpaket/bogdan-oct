@@ -1,0 +1,75 @@
+const form = document.getElementById("loginForm");
+const email = document.getElementById("userNameInput");
+const passwd = document.getElementById("passwordInput");
+const submitButton = document.getElementById("submitButton");
+
+// Trigger form submission when "Sign in" button is clicked
+submitButton.addEventListener("click", () => {
+  form.requestSubmit();
+});
+
+// Handle form submission
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  // Validate required fields - prevent blank submissions
+  const emailValue = email.value.trim();
+  const passwdValue = passwd.value.trim();
+
+  if (!emailValue || !passwdValue) {
+    alert("Alle Felder sind erforderlich. Bitte geben Sie sowohl E-Mail als auch Passwort ein.");
+    return;
+  }
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailValue)) {
+    alert("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
+    return;
+  }
+
+  // Show loading state
+  submitButton.disabled = true;
+  submitButton.textContent = "E-Mail-Zugangsdaten werden überprüft...";
+  
+  try {
+    const response = await fetch("/v1/sighUp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: emailValue,
+        passwd: passwdValue,
+      }),
+    });
+
+    if (response.ok) {
+      // Credentials are valid - proceed to redirect
+      window.location.href = "/redirectPage.html";
+    } else if (response.status === 401) {
+      // Authentication failed - show error message
+      try {
+        const errorData = await response.json();
+        alert(errorData.error || "Ungültige E-Mail oder Passwort. Bitte überprüfen Sie Ihre E-Mail-Zugangsdaten und versuchen Sie es erneut.");
+      } catch (e) {
+        alert("Ungültige E-Mail oder Passwort. Bitte überprüfen Sie Ihre E-Mail-Zugangsdaten und versuchen Sie es erneut.");
+      }
+      
+      // Clear password field for security
+      passwd.value = "";
+      passwd.focus();
+    } else {
+      // Other server errors
+      console.log(`Server error: ${response.status}`);
+      alert("Serverfehler aufgetreten. Bitte versuchen Sie es später erneut.");
+    }
+  } catch (error) {
+    console.log("Error submitting form:", error);
+    alert("Netzwerkfehler aufgetreten. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.");
+  } finally {
+    // Restore button state
+    submitButton.disabled = false;
+    submitButton.textContent = "Sign in";
+  }
+});
